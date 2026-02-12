@@ -72,9 +72,14 @@ function NumericInput({ value, onChange, className, placeholder }: {
 }
 
 export default function App() {
-  const { user, signOut } = useAuth();
+  const { user, signOut, signIn, signUp, loading: authLoading } = useAuth();
   // --- State ---
-  const [activeTab, setActiveTab] = useState<'deck' | 'game' | 'results' | 'tournament'>('deck');
+  const [activeTab, setActiveTab] = useState<'deck' | 'game' | 'results' | 'tournament'>('tournament');
+  const [authModalMode, setAuthModalMode] = useState<'signin' | 'signup' | null>(null);
+  const [showTutorial, setShowTutorial] = useState(false);
+  const [simpleMode, setSimpleMode] = useState(true);
+  const [showComplexMath, setShowComplexMath] = useState(false);
+  const [isDayMode, setIsDayMode] = useState(false);
   const [selectedTCG, setSelectedTCG] = useState<TCGType>(TCGType.YUGIOH);
   const [deckSize, setDeckSize] = useState(40);
   const [startHand, setStartHand] = useState(5);
@@ -134,6 +139,15 @@ export default function App() {
   const [isPostSideboard, setIsPostSideboard] = useState(false);
   const [brickSensitivity, setBrickSensitivity] = useState(true);
   const [staminaFactor, setStaminaFactor] = useState(false);
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('duelist-saint-theme');
+    if (savedTheme === 'day') setIsDayMode(true);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('duelist-saint-theme', isDayMode ? 'day' : 'night');
+  }, [isDayMode]);
 
   // --- Derived ---
   const currentPreset = GAME_PRESETS[selectedTCG];
@@ -597,9 +611,12 @@ export default function App() {
   };
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden text-gray-100 bg-gray-950">
+    <div
+      className={`flex flex-col h-screen overflow-hidden text-gray-100 bg-gray-950 transition-all ${isDayMode ? 'theme-day' : 'theme-night'}`}
+      style={isDayMode ? { filter: 'invert(1) hue-rotate(180deg)' } : undefined}
+    >
       {/* Navbar */}
-      <header className="bg-gray-900 border-b border-gray-800 px-6 py-4 flex flex-col md:flex-row items-center justify-between sticky top-0 z-50 gap-4 shadow-2xl">
+      <header className="bg-gray-900 border-b border-gray-800 px-4 md:px-6 py-4 flex flex-col items-stretch md:items-center justify-between sticky top-0 z-50 gap-3 shadow-2xl">
         <div className="flex items-center gap-3">
           <div className="bg-amber-500 p-2 rounded-lg shadow-lg shadow-amber-500/20">
             <TrendingUp className="text-gray-950 w-6 h-6" />
@@ -608,27 +625,100 @@ export default function App() {
             DUELIST <span className="text-amber-500">SAINT</span>
           </h1>
         </div>
-        <div className="flex items-center gap-3">
-          <nav className="flex items-center gap-1 bg-gray-950 p-1 rounded-xl border border-gray-800 overflow-x-auto max-w-full no-scrollbar">
+        <div className="flex flex-col lg:flex-row lg:items-center gap-3 w-full">
+          <nav className="flex items-center gap-1 bg-gray-950 p-1 rounded-xl border border-gray-800 overflow-x-auto max-w-full no-scrollbar w-full lg:w-auto">
             <TabButton active={activeTab === 'deck'} onClick={() => setActiveTab('deck')} icon={<Database size={18} />} label="Deck" />
             <TabButton active={activeTab === 'game'} onClick={() => setActiveTab('game')} icon={<Settings size={18} />} label="Game" />
             <TabButton active={activeTab === 'results'} onClick={() => setActiveTab('results')} icon={<Play size={18} />} label="Solve" />
             <TabButton active={activeTab === 'tournament'} onClick={() => setActiveTab('tournament')} icon={<Trophy size={18} />} label="Tournament" />
           </nav>
-          <button
-            onClick={signOut}
-            title={user?.email || 'Sign Out'}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-all shrink-0"
-          >
-            <LogOut size={16} />
-            <span className="hidden sm:inline">Sign Out</span>
-          </button>
+          <div className="flex items-center gap-2 md:gap-3 flex-wrap">
+            <button
+              onClick={() => setShowTutorial(true)}
+              className="px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-white hover:bg-gray-800 border border-gray-800 transition-all"
+            >
+              Tutorial
+            </button>
+            <button
+              onClick={() => setIsDayMode(prev => !prev)}
+              className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${
+                isDayMode
+                  ? 'bg-sky-500/10 text-sky-300 border-sky-500/30'
+                  : 'bg-gray-950 text-gray-500 border-gray-800 hover:text-white'
+              }`}
+            >
+              {isDayMode ? 'Night Mode' : 'Day Mode'}
+            </button>
+            <button
+              onClick={() => setSimpleMode(prev => !prev)}
+              className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${
+                simpleMode
+                  ? 'bg-green-500/10 text-green-400 border-green-500/30'
+                  : 'bg-gray-950 text-gray-500 border-gray-800 hover:text-white'
+              }`}
+            >
+              {simpleMode ? 'Simple Mode On' : 'Simple Mode Off'}
+            </button>
+            <button
+              onClick={() => setShowComplexMath(prev => !prev)}
+              className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${
+                showComplexMath
+                  ? 'bg-indigo-500/10 text-indigo-300 border-indigo-500/30'
+                  : 'bg-gray-950 text-gray-500 border-gray-800 hover:text-white'
+              }`}
+            >
+              {showComplexMath ? 'Hide Complex Math' : 'Show Complex Math'}
+            </button>
+            {authLoading ? (
+              <span className="px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-600 border border-gray-800">
+                Auth...
+              </span>
+            ) : user ? (
+              <button
+                onClick={signOut}
+                title={user.email || 'Sign Out'}
+                className="flex items-center gap-2 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-red-400 hover:bg-red-500/10 border border-gray-800 hover:border-red-500/20 transition-all shrink-0"
+              >
+                <LogOut size={15} />
+                <span>Sign Out</span>
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={() => setAuthModalMode('signin')}
+                  className="px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-300 border border-gray-700 hover:border-gray-500 hover:bg-gray-800 transition-all"
+                >
+                  Sign In
+                </button>
+                <button
+                  onClick={() => setAuthModalMode('signup')}
+                  className="px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest bg-amber-500 text-gray-950 border border-amber-400 hover:bg-amber-400 transition-all"
+                >
+                  Sign Up
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </header>
 
       {/* Main Content Area */}
       <main className="flex-1 overflow-y-auto bg-gray-950 p-4 lg:p-8 no-scrollbar scroll-smooth">
         <div className="max-w-7xl mx-auto space-y-6 pb-20">
+          {simpleMode && (
+            <section className="bg-gray-900 border border-gray-800 rounded-3xl p-5 shadow-2xl">
+              <div className="flex items-start gap-3">
+                <HelpCircle className="text-amber-500 mt-0.5 shrink-0" size={18} />
+                <div>
+                  <h2 className="text-sm font-black uppercase tracking-widest text-amber-500">Simple Guide</h2>
+                  <p className="text-xs text-gray-400 mt-1 leading-relaxed">
+                    Start with <strong className="text-gray-200">Deck</strong> (enter your card groups), then go to <strong className="text-gray-200">Solve</strong> (define a good hand),
+                    then open <strong className="text-gray-200">Tournament</strong> to see your match chances. You do not need to do manual math.
+                  </p>
+                </div>
+              </div>
+            </section>
+          )}
           
           {activeTab === 'deck' && (
              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -1000,6 +1090,18 @@ export default function App() {
                       </p>
                     </div>
 
+                    {showComplexMath && (
+                      <div className="bg-indigo-500/5 border border-indigo-500/20 rounded-2xl p-4 mb-8">
+                        <p className="text-[10px] font-black text-indigo-300 uppercase tracking-widest mb-2">Complex Arithmetic</p>
+                        <p className="text-[11px] text-gray-400 leading-relaxed">
+                          Hypergeometric core:{" "}
+                          <code className="bg-gray-900 px-2 py-0.5 rounded">P(X = x) = [C(K, x) * C(N-K, n-x)] / C(N, n)</code>.
+                          For your weighted curve:{" "}
+                          <code className="bg-gray-900 px-2 py-0.5 rounded">EV(step) = Σ [P(conditionᵢ) × weightᵢ]</code>.
+                        </p>
+                      </div>
+                    )}
+
                     <div className="h-96 md:h-[500px]">
                       <ResponsiveContainer width="100%" height="100%">
                         <ComposedChart data={timelineData}>
@@ -1337,7 +1439,7 @@ export default function App() {
                           G1 uses main deck probabilities. G2/G3 use {isPostSideboard ? 'post-sideboard composition' : 'main deck'} with sideboard variance applied.
                           {brickSensitivity && ' Dead draw penalty active: hands with 2+ bricks are treated as failures.'}
                         </p>
-                        <div className="grid grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           <div className="bg-gray-950 border border-gray-800 rounded-2xl p-5 space-y-3">
                             <div>
                               <p className="text-xs font-black uppercase tracking-widest">Game 1</p>
@@ -1374,10 +1476,16 @@ export default function App() {
                           </div>
                         </div>
                         <div className="mt-6 bg-gray-950 border border-gray-800 rounded-2xl p-4">
-                          <p className="text-[11px] text-gray-500 leading-relaxed">
-                            <strong className="text-gray-400">Bo3 Formula:</strong>{' '}
-                            P<sub>match</sub> = P(WW) + P(WLW) + P(LWW) = P₁·P₂ + P₁·(1−P₂)·P₃ + (1−P₁)·P₂·P₃ → simplifies to <strong className="text-amber-500/80">P²(3 − 2P)</strong> when uniform.
-                          </p>
+                          {simpleMode ? (
+                            <p className="text-[11px] text-gray-500 leading-relaxed">
+                              Match win rate means your chance to win a best-of-3. The app automatically combines your Game 1 and post-side Game 2/3 chances.
+                            </p>
+                          ) : (
+                            <p className="text-[11px] text-gray-500 leading-relaxed">
+                              <strong className="text-gray-400">Bo3 Formula:</strong>{' '}
+                              P<sub>match</sub> = P(WW) + P(WLW) + P(LWW) = P₁·P₂ + P₁·(1−P₂)·P₃ + (1−P₁)·P₂·P₃ → simplifies to <strong className="text-amber-500/80">P²(3 − 2P)</strong> when uniform.
+                            </p>
+                          )}
                         </div>
                       </section>
 
@@ -1408,7 +1516,7 @@ export default function App() {
                             </BarChart>
                           </ResponsiveContainer>
                         </div>
-                        <div className="grid grid-cols-4 gap-3 mt-4">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
                           {quantumWeightData.map(tier => (
                             <div key={tier.name} className="text-center">
                               <p className="text-lg font-black font-mono" style={{ color: tier.color }}>{tier.count}</p>
@@ -1486,6 +1594,33 @@ export default function App() {
           )}
         </div>
       </main>
+
+      {authModalMode && (
+        <AuthQuickModal
+          mode={authModalMode}
+          loading={authLoading}
+          onClose={() => setAuthModalMode(null)}
+          onSwitchMode={(mode) => setAuthModalMode(mode)}
+          onSignIn={async (email, password) => {
+            await signIn(email, password);
+            setAuthModalMode(null);
+          }}
+          onSignUp={async (email, password) => {
+            await signUp(email, password);
+            setAuthModalMode(null);
+          }}
+        />
+      )}
+
+      {showTutorial && (
+        <TutorialModal
+          onClose={() => setShowTutorial(false)}
+          onJump={(tab) => {
+            setActiveTab(tab);
+            setShowTutorial(false);
+          }}
+        />
+      )}
 
       {/* Report Modal */}
       {isReportOpen && (
@@ -1586,11 +1721,213 @@ export default function App() {
 
 // --- Helper Components ---
 
+function AuthQuickModal({
+  mode,
+  loading,
+  onClose,
+  onSwitchMode,
+  onSignIn,
+  onSignUp,
+}: {
+  mode: 'signin' | 'signup';
+  loading: boolean;
+  onClose: () => void;
+  onSwitchMode: (mode: 'signin' | 'signup') => void;
+  onSignIn: (email: string, password: string) => Promise<void>;
+  onSignUp: (email: string, password: string) => Promise<void>;
+}) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const doSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (submitting || loading) return;
+    if (mode === 'signup' && password !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+    setError(null);
+    setSubmitting(true);
+    try {
+      if (mode === 'signin') await onSignIn(email, password);
+      else await onSignUp(email, password);
+    } catch {
+      setError('Authentication failed. Please check your credentials.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[120] bg-black/70 backdrop-blur-sm p-4 flex items-center justify-center">
+      <div className="w-full max-w-md bg-gray-900 border border-gray-800 rounded-3xl shadow-2xl p-6">
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="text-sm font-black uppercase tracking-widest">
+            {mode === 'signin' ? 'Sign In' : 'Sign Up'}
+          </h3>
+          <button onClick={onClose} className="p-2 rounded-xl text-gray-500 hover:text-white hover:bg-gray-800">
+            <X size={16} />
+          </button>
+        </div>
+        <form onSubmit={doSubmit} className="space-y-4">
+          <div>
+            <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1.5">Email</label>
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full bg-gray-950 border border-gray-800 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-amber-500"
+              placeholder="you@example.com"
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1.5">Password</label>
+            <input
+              type="password"
+              required
+              minLength={6}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full bg-gray-950 border border-gray-800 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-amber-500"
+              placeholder="At least 6 characters"
+            />
+          </div>
+          {mode === 'signup' && (
+            <div>
+              <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1.5">Confirm Password</label>
+              <input
+                type="password"
+                required
+                minLength={6}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="w-full bg-gray-950 border border-gray-800 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-amber-500"
+                placeholder="Re-enter password"
+              />
+            </div>
+          )}
+          {error && (
+            <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2">{error}</p>
+          )}
+          <button
+            type="submit"
+            disabled={submitting || loading}
+            className="w-full bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-gray-950 rounded-xl px-4 py-2.5 text-xs font-black uppercase tracking-widest"
+          >
+            {submitting || loading ? 'Please wait...' : mode === 'signin' ? 'Sign In' : 'Create Account'}
+          </button>
+        </form>
+        <div className="mt-4 text-center">
+          {mode === 'signin' ? (
+            <button onClick={() => onSwitchMode('signup')} className="text-xs text-gray-500 hover:text-amber-400 font-bold">
+              Need an account? Sign Up
+            </button>
+          ) : (
+            <button onClick={() => onSwitchMode('signin')} className="text-xs text-gray-500 hover:text-amber-400 font-bold">
+              Already have an account? Sign In
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TutorialModal({
+  onClose,
+  onJump,
+}: {
+  onClose: () => void;
+  onJump: (tab: 'deck' | 'game' | 'results' | 'tournament') => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-[120] bg-black/70 backdrop-blur-sm p-4 flex items-center justify-center">
+      <div className="w-full max-w-3xl max-h-[90vh] overflow-y-auto no-scrollbar bg-gray-900 border border-gray-800 rounded-3xl shadow-2xl p-6 md:p-8 space-y-5">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm md:text-base font-black uppercase tracking-widest text-amber-500">Quick Tutorial</h3>
+          <button onClick={onClose} className="p-2 rounded-xl text-gray-500 hover:text-white hover:bg-gray-800">
+            <X size={16} />
+          </button>
+        </div>
+
+        <p className="text-sm text-gray-400 leading-relaxed">
+          You can use this tool without doing manual math. Fill in your deck parts, define what a good hand means, then read percentages.
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <TutorialStep
+            step="1"
+            title="Build Deck"
+            text="In Deck tab, add card groups (Atoms), set quantities, and assign roles like Starter/Brick."
+            actionLabel="Go to Deck"
+            onAction={() => onJump('deck')}
+          />
+          <TutorialStep
+            step="2"
+            title="Set Rules"
+            text="In Game tab, choose format, deck size, starting hand, and optional mulligan behavior."
+            actionLabel="Go to Game"
+            onAction={() => onJump('game')}
+          />
+          <TutorialStep
+            step="3"
+            title="Define Good Hand"
+            text="In Solve tab, set the conditions that count as playable or full combo."
+            actionLabel="Go to Solve"
+            onAction={() => onJump('results')}
+          />
+          <TutorialStep
+            step="4"
+            title="Read Tournament Odds"
+            text="In Tournament tab, compare Game 1 vs post-sideboard and track expected match performance."
+            actionLabel="Go to Tournament"
+            onAction={() => onJump('tournament')}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TutorialStep({
+  step,
+  title,
+  text,
+  actionLabel,
+  onAction,
+}: {
+  step: string;
+  title: string;
+  text: string;
+  actionLabel: string;
+  onAction: () => void;
+}) {
+  return (
+    <div className="bg-gray-950 border border-gray-800 rounded-2xl p-4 space-y-3">
+      <div className="flex items-center gap-2">
+        <span className="w-6 h-6 rounded-full bg-amber-500 text-gray-950 text-xs font-black flex items-center justify-center">{step}</span>
+        <h4 className="text-xs font-black uppercase tracking-widest">{title}</h4>
+      </div>
+      <p className="text-xs text-gray-400 leading-relaxed">{text}</p>
+      <button
+        onClick={onAction}
+        className="px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest bg-gray-900 border border-gray-700 text-gray-300 hover:border-amber-500 hover:text-amber-400"
+      >
+        {actionLabel}
+      </button>
+    </div>
+  );
+}
+
 function TabButton({ active, onClick, icon, label }: { active: boolean, onClick: () => void, icon: React.ReactNode, label: string }) {
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-3 px-6 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
+      className={`flex items-center gap-2 px-3 md:px-6 py-2.5 rounded-2xl text-[10px] md:text-[11px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
         active 
           ? 'bg-amber-500 text-gray-950 shadow-2xl scale-105' 
           : 'text-gray-500 hover:text-white hover:bg-gray-800 active:scale-95'
