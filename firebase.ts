@@ -18,6 +18,12 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:000000000000:web:0000000000000000",
 };
 
+export const isFirebaseConfigured =
+  !!import.meta.env.VITE_FIREBASE_API_KEY &&
+  !!import.meta.env.VITE_FIREBASE_AUTH_DOMAIN &&
+  !!import.meta.env.VITE_FIREBASE_PROJECT_ID &&
+  !!import.meta.env.VITE_FIREBASE_APP_ID;
+
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export default app;
