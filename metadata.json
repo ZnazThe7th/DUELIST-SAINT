@@ -1,0 +1,5 @@
+{
+  "name": "Duelist Saint: Multi-TCG Hand Probability Calculator",
+  "description": "A high-precision multivariate hypergeometric calculator for TCG players. Analyzes deck consistency, role-based hand probabilities, time-to-hit distributions, and tournament Best-of-3 performance across Yu-Gi-Oh!, MTG, Pokémon, and One Piece TCG.",
+  "requestFramePermissions": []
+}
