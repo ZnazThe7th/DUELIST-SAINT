@@ -19,10 +19,8 @@ import {
 import { 
   Settings, Database, Play, Trophy, ChevronRight, Plus, Trash2, 
   Info, AlertTriangle, CheckCircle2, TrendingUp, HelpCircle, BookOpen, ExternalLink,
-  Target, Layers, Zap, Cpu, Sliders, ListFilter, Activity, Box, FileText, Download, X, RefreshCw, Filter, LogOut
+  Target, Layers, Zap, Cpu, Sliders, ListFilter, Activity, Box, FileText, Download, X, RefreshCw, Filter
 } from 'lucide-react';
-import { useAuth } from './AuthContext';
-import { isFirebaseConfigured } from './firebase';
 
 /**
  * Enhanced Numeric Input to handle empty states better.
@@ -73,10 +71,8 @@ function NumericInput({ value, onChange, className, placeholder }: {
 }
 
 export default function App() {
-  const { user, signOut, signIn, signUp, loading: authLoading, error: authError, clearError } = useAuth();
   // --- State ---
   const [activeTab, setActiveTab] = useState<'deck' | 'game' | 'results' | 'tournament'>('tournament');
-  const [authModalMode, setAuthModalMode] = useState<'signin' | 'signup' | null>(null);
   const [showTutorial, setShowTutorial] = useState(false);
   const [simpleMode, setSimpleMode] = useState(true);
   const [showComplexMath, setShowComplexMath] = useState(false);
@@ -179,8 +175,8 @@ export default function App() {
   }, [totalAtomCount, deckSize, remainingCards]);
 
   // Post-Sideboard deck composition
-  const totalSidedOut = Object.values(sideOuts).reduce((s, v) => s + v, 0);
-  const totalSidedIn = sideDeckAtoms.reduce((s, a) => s + a.count, 0);
+  const totalSidedOut = (Object.values(sideOuts) as number[]).reduce<number>((s, v) => s + v, 0);
+  const totalSidedIn = sideDeckAtoms.reduce<number>((s, a) => s + a.count, 0);
 
   const postSideAtoms = useMemo(() => {
     const modified = atoms.map(a => ({
@@ -670,35 +666,6 @@ export default function App() {
             >
               {showComplexMath ? 'Hide Complex Math' : 'Show Complex Math'}
             </button>
-            {authLoading ? (
-              <span className="px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-600 border border-gray-800">
-                Auth...
-              </span>
-            ) : user ? (
-              <button
-                onClick={signOut}
-                title={user.email || 'Sign Out'}
-                className="flex items-center gap-2 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-red-400 hover:bg-red-500/10 border border-gray-800 hover:border-red-500/20 transition-all shrink-0"
-              >
-                <LogOut size={15} />
-                <span>Sign Out</span>
-              </button>
-            ) : (
-              <>
-                <button
-                  onClick={() => setAuthModalMode('signin')}
-                  className="px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-300 border border-gray-700 hover:border-gray-500 hover:bg-gray-800 transition-all"
-                >
-                  Sign In
-                </button>
-                <button
-                  onClick={() => setAuthModalMode('signup')}
-                  className="px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest bg-amber-500 text-gray-950 border border-amber-400 hover:bg-amber-400 transition-all"
-                >
-                  Sign Up
-                </button>
-              </>
-            )}
           </div>
         </div>
       </header>
@@ -1596,26 +1563,6 @@ export default function App() {
         </div>
       </main>
 
-      {authModalMode && (
-        <AuthQuickModal
-          mode={authModalMode}
-          loading={authLoading}
-          authError={authError}
-          isFirebaseConfigured={isFirebaseConfigured}
-          onClose={() => setAuthModalMode(null)}
-          onSwitchMode={(mode) => setAuthModalMode(mode)}
-          onClearError={clearError}
-          onSignIn={async (email, password) => {
-            await signIn(email, password);
-            setAuthModalMode(null);
-          }}
-          onSignUp={async (email, password) => {
-            await signUp(email, password);
-            setAuthModalMode(null);
-          }}
-        />
-      )}
-
       {showTutorial && (
         <TutorialModal
           onClose={() => setShowTutorial(false)}
@@ -1724,142 +1671,6 @@ export default function App() {
 }
 
 // --- Helper Components ---
-
-function AuthQuickModal({
-  mode,
-  loading,
-  authError,
-  isFirebaseConfigured,
-  onClose,
-  onSwitchMode,
-  onClearError,
-  onSignIn,
-  onSignUp,
-}: {
-  mode: 'signin' | 'signup';
-  loading: boolean;
-  authError: string | null;
-  isFirebaseConfigured: boolean;
-  onClose: () => void;
-  onSwitchMode: (mode: 'signin' | 'signup') => void;
-  onClearError: () => void;
-  onSignIn: (email: string, password: string) => Promise<void>;
-  onSignUp: (email: string, password: string) => Promise<void>;
-}) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (authError) setError(authError);
-  }, [authError]);
-
-  const doSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (submitting || loading) return;
-    if (mode === 'signup' && password !== confirmPassword) {
-      setError('Passwords do not match.');
-      return;
-    }
-    if (!isFirebaseConfigured) {
-      setError('Firebase is not configured. Add your VITE_FIREBASE_* values in .env and restart dev server.');
-      return;
-    }
-    setError(null);
-    onClearError();
-    setSubmitting(true);
-    try {
-      if (mode === 'signin') await onSignIn(email, password);
-      else await onSignUp(email, password);
-    } catch {
-      // Keep the friendly error from AuthContext.
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-[120] bg-black/70 backdrop-blur-sm p-4 flex items-center justify-center">
-      <div className="w-full max-w-md bg-gray-900 border border-gray-800 rounded-3xl shadow-2xl p-6">
-        <div className="flex items-center justify-between mb-5">
-          <h3 className="text-sm font-black uppercase tracking-widest">
-            {mode === 'signin' ? 'Sign In' : 'Sign Up'}
-          </h3>
-          <button onClick={onClose} className="p-2 rounded-xl text-gray-500 hover:text-white hover:bg-gray-800">
-            <X size={16} />
-          </button>
-        </div>
-        <form onSubmit={doSubmit} className="space-y-4">
-          {!isFirebaseConfigured && (
-            <p className="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2">
-              Firebase config missing. Create `.env` using `.env.example`, then restart `npm run dev`.
-            </p>
-          )}
-          <div>
-            <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1.5">Email</label>
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-gray-950 border border-gray-800 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-amber-500"
-              placeholder="you@example.com"
-            />
-          </div>
-          <div>
-            <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1.5">Password</label>
-            <input
-              type="password"
-              required
-              minLength={6}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-gray-950 border border-gray-800 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-amber-500"
-              placeholder="At least 6 characters"
-            />
-          </div>
-          {mode === 'signup' && (
-            <div>
-              <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1.5">Confirm Password</label>
-              <input
-                type="password"
-                required
-                minLength={6}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full bg-gray-950 border border-gray-800 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-amber-500"
-                placeholder="Re-enter password"
-              />
-            </div>
-          )}
-          {error && (
-            <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2">{error}</p>
-          )}
-          <button
-            type="submit"
-            disabled={submitting || loading}
-            className="w-full bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-gray-950 rounded-xl px-4 py-2.5 text-xs font-black uppercase tracking-widest"
-          >
-            {submitting || loading ? 'Please wait...' : mode === 'signin' ? 'Sign In' : 'Create Account'}
-          </button>
-        </form>
-        <div className="mt-4 text-center">
-          {mode === 'signin' ? (
-            <button onClick={() => onSwitchMode('signup')} className="text-xs text-gray-500 hover:text-amber-400 font-bold">
-              Need an account? Sign Up
-            </button>
-          ) : (
-            <button onClick={() => onSwitchMode('signin')} className="text-xs text-gray-500 hover:text-amber-400 font-bold">
-              Already have an account? Sign In
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function TutorialModal({
   onClose,
