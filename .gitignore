@@ -11,6 +11,11 @@ node_modules
 dist
 dist-ssr
 *.local
+.env
+.env.local
+.env.*.local
+dev-dist
+generate-icons.mjs
 
 # Editor directories and files
 .vscode/*
