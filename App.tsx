@@ -82,6 +82,7 @@ export default function App() {
   const [startHand, setStartHand] = useState(5);
   const [isGoingSecond, setIsGoingSecond] = useState(false);
   const [isQuantumMode, setIsQuantumMode] = useState(false);
+  const [solveView, setSolveView] = useState<'winStates' | 'chart'>('winStates');
   const [isReportOpen, setIsReportOpen] = useState(false);
   
   // Mulligan
@@ -156,6 +157,41 @@ export default function App() {
     atoms.forEach(a => a.roles.forEach(r => roles.add(r)));
     return Array.from(roles);
   }, [atoms]);
+
+  const solveRoleOptions = useMemo(() => {
+    const roles = new Set<string>();
+    atoms.forEach(atom => {
+      atom.roles.forEach(role => {
+        const normalized = role.trim();
+        if (normalized) roles.add(normalized);
+      });
+    });
+    return roles.size > 0 ? Array.from(roles) : DEFAULT_ROLES;
+  }, [atoms]);
+
+  const defaultSolveRole = solveRoleOptions[0] || allRoles[0] || 'Starter';
+
+  useEffect(() => {
+    if (solveRoleOptions.length === 0) return;
+    const fallbackRole = solveRoleOptions[0];
+    setConditions(prevConditions => {
+      let hasChanges = false;
+      const nextConditions = prevConditions.map(condition => {
+        let conditionChanged = false;
+        const nextThresholds = condition.thresholds.map(threshold => {
+          if (solveRoleOptions.includes(threshold.role)) return threshold;
+          conditionChanged = true;
+          return { ...threshold, role: fallbackRole };
+        });
+        if (conditionChanged) {
+          hasChanges = true;
+          return { ...condition, thresholds: nextThresholds };
+        }
+        return condition;
+      });
+      return hasChanges ? nextConditions : prevConditions;
+    });
+  }, [solveRoleOptions]);
 
   const globalRoleCounts = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -513,7 +549,7 @@ export default function App() {
       id: Math.random().toString(), 
       name: 'New Event', 
       weight: 1.0, 
-      thresholds: [{ role: allRoles[0] || 'Starter', minCount: 1, maxCount: 40 }] 
+      thresholds: [{ role: defaultSolveRole, minCount: 1, maxCount: 40 }] 
     }]);
   };
 
@@ -935,8 +971,31 @@ export default function App() {
                  </button>
               </div>
 
-              <div className="flex flex-col md:flex-row gap-6">
-                <section className="md:w-1/3 bg-gray-900 border border-gray-800 rounded-3xl p-6 shadow-2xl h-fit sticky top-24">
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  onClick={() => setSolveView('winStates')}
+                  className={`px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-widest border transition-all active:scale-95 ${
+                    solveView === 'winStates'
+                      ? 'bg-amber-500 text-gray-950 border-amber-400 shadow-xl'
+                      : 'bg-gray-900 border-gray-800 text-gray-500 hover:text-white hover:border-gray-600'
+                  }`}
+                >
+                  Win States
+                </button>
+                <button
+                  onClick={() => setSolveView('chart')}
+                  className={`px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-widest border transition-all active:scale-95 hover:-translate-y-0.5 ${
+                    solveView === 'chart'
+                      ? 'bg-indigo-500 text-gray-950 border-indigo-400 shadow-xl'
+                      : 'bg-gray-900 border-gray-800 text-gray-500 hover:text-white hover:border-indigo-400/50 hover:shadow-lg'
+                  }`}
+                >
+                  Projection Chart
+                </button>
+              </div>
+
+              {solveView === 'winStates' ? (
+                <section className="bg-gray-900 border border-gray-800 rounded-3xl p-6 shadow-2xl">
                    <div className="flex items-center justify-between mb-4">
                     <h3 className="font-bold flex items-center gap-2 text-lg">
                       <Target className="text-amber-500" size={24} />
@@ -988,7 +1047,7 @@ export default function App() {
                                    onChange={(e) => updateThreshold(c.id, ti, { role: e.target.value })}
                                    className="bg-transparent text-[10px] font-black uppercase tracking-widest text-gray-300 outline-none"
                                  >
-                                   {allRoles.map(r => <option key={r} value={r} className="bg-gray-900">{r}</option>)}
+                                  {solveRoleOptions.map(r => <option key={r} value={r} className="bg-gray-900">{r}</option>)}
                                  </select>
                                  <button onClick={() => removeThreshold(c.id, ti)} className="text-gray-600 hover:text-red-500">
                                    <X size={12} />
@@ -1007,7 +1066,7 @@ export default function App() {
                              </div>
                            ))}
                            <button 
-                            onClick={() => setConditions(conditions.map(cond => cond.id === c.id ? { ...cond, thresholds: [...cond.thresholds, { role: allRoles[0], minCount: 1, maxCount: deckSize }] } : cond))}
+                            onClick={() => setConditions(conditions.map(cond => cond.id === c.id ? { ...cond, thresholds: [...cond.thresholds, { role: defaultSolveRole, minCount: 1, maxCount: deckSize }] } : cond))}
                             className="w-full py-2 border border-dashed border-gray-800 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-amber-500 transition-all flex items-center justify-center gap-2"
                            >
                              <Plus size={14} /> Role Constraint
@@ -1017,9 +1076,8 @@ export default function App() {
                     ))}
                   </div>
                 </section>
-
-                <div className="flex-1 space-y-6">
-                  <section className="bg-gray-900 border border-gray-800 rounded-3xl p-8 shadow-2xl relative overflow-hidden">
+              ) : (
+                <section className="bg-gray-900 border border-gray-800 rounded-3xl p-8 shadow-2xl relative overflow-hidden transition-all hover:-translate-y-0.5 hover:border-indigo-400/50 hover:shadow-indigo-500/10">
                     <div className="flex items-center justify-between mb-10">
                       <div className="flex items-center gap-4">
                          <div className={`p-3 rounded-2xl transition-all ${isQuantumMode ? 'bg-indigo-500 text-gray-950 shadow-xl' : 'bg-gray-800 text-gray-400'}`}>
@@ -1107,9 +1165,8 @@ export default function App() {
                         </ComposedChart>
                       </ResponsiveContainer>
                     </div>
-                  </section>
-                </div>
-              </div>
+                </section>
+              )}
             </div>
           )}
 
