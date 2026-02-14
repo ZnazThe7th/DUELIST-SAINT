@@ -76,6 +76,7 @@ export default function App() {
   const [showTutorial, setShowTutorial] = useState(false);
   const [simpleMode, setSimpleMode] = useState(true);
   const [showComplexMath, setShowComplexMath] = useState(false);
+  const [isSolveChartOpen, setIsSolveChartOpen] = useState(false);
   const [isDayMode, setIsDayMode] = useState(false);
   const [selectedTCG, setSelectedTCG] = useState<TCGType>(TCGType.YUGIOH);
   const [deckSize, setDeckSize] = useState(40);
@@ -156,6 +157,13 @@ export default function App() {
     atoms.forEach(a => a.roles.forEach(r => roles.add(r)));
     return Array.from(roles);
   }, [atoms]);
+
+  const deckTabRoleOptions = useMemo(() => {
+    const roles = new Set<string>();
+    atoms.forEach(a => a.roles.forEach(r => roles.add(r)));
+    const roleList = Array.from(roles);
+    return roleList.length > 0 ? roleList : allRoles;
+  }, [atoms, allRoles]);
 
   const globalRoleCounts = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -922,6 +930,12 @@ export default function App() {
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="flex justify-end gap-3">
                  <button
+                  onClick={() => setIsSolveChartOpen(true)}
+                  className="bg-amber-600 hover:bg-amber-500 text-white px-6 py-2.5 rounded-2xl text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-all shadow-xl active:scale-95 hover:shadow-amber-500/30"
+                 >
+                   <Activity size={16} /> Open Chart
+                 </button>
+                 <button
                   onClick={() => setActiveTab('tournament')}
                   className="bg-gray-800 hover:bg-gray-700 text-white px-6 py-2.5 rounded-2xl text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-all shadow-xl active:scale-95"
                  >
@@ -988,7 +1002,7 @@ export default function App() {
                                    onChange={(e) => updateThreshold(c.id, ti, { role: e.target.value })}
                                    className="bg-transparent text-[10px] font-black uppercase tracking-widest text-gray-300 outline-none"
                                  >
-                                   {allRoles.map(r => <option key={r} value={r} className="bg-gray-900">{r}</option>)}
+                                  {deckTabRoleOptions.map(r => <option key={r} value={r} className="bg-gray-900">{r}</option>)}
                                  </select>
                                  <button onClick={() => removeThreshold(c.id, ti)} className="text-gray-600 hover:text-red-500">
                                    <X size={12} />
@@ -1007,7 +1021,7 @@ export default function App() {
                              </div>
                            ))}
                            <button 
-                            onClick={() => setConditions(conditions.map(cond => cond.id === c.id ? { ...cond, thresholds: [...cond.thresholds, { role: allRoles[0], minCount: 1, maxCount: deckSize }] } : cond))}
+                            onClick={() => setConditions(conditions.map(cond => cond.id === c.id ? { ...cond, thresholds: [...cond.thresholds, { role: deckTabRoleOptions[0], minCount: 1, maxCount: deckSize }] } : cond))}
                             className="w-full py-2 border border-dashed border-gray-800 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-amber-500 transition-all flex items-center justify-center gap-2"
                            >
                              <Plus size={14} /> Role Constraint
@@ -1019,27 +1033,51 @@ export default function App() {
                 </section>
 
                 <div className="flex-1 space-y-6">
-                  <section className="bg-gray-900 border border-gray-800 rounded-3xl p-8 shadow-2xl relative overflow-hidden">
-                    <div className="flex items-center justify-between mb-10">
+                  <section className="bg-gray-900 border border-gray-800 rounded-3xl p-8 shadow-2xl relative overflow-hidden hover:border-amber-500/40 transition-all">
+                    <div className="flex items-start gap-3">
+                      <Activity className="text-amber-500 mt-0.5 shrink-0" size={20} />
+                      <div className="space-y-2">
+                        <h3 className="font-black text-lg uppercase tracking-tight">Projection Chart Panel</h3>
+                        <p className="text-xs text-gray-400 leading-relaxed">
+                          The Solve chart now opens in a separate floating panel so the Win State editor stays focused and easier to use.
+                          Use the <strong className="text-gray-200">Open Chart</strong> button above.
+                        </p>
+                      </div>
+                    </div>
+                  </section>
+                </div>
+              </div>
+
+              {isSolveChartOpen && (
+                <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm p-4 md:p-8 flex items-end md:items-center justify-center">
+                  <section className="w-full max-w-6xl bg-gray-900 border border-gray-800 rounded-3xl p-5 md:p-8 shadow-2xl relative overflow-hidden hover:-translate-y-0.5 transition-all">
+                    <button
+                      onClick={() => setIsSolveChartOpen(false)}
+                      className="absolute top-4 right-4 p-2 rounded-xl text-gray-500 hover:text-white hover:bg-gray-800"
+                    >
+                      <X size={18} />
+                    </button>
+
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4 pr-10">
                       <div className="flex items-center gap-4">
-                         <div className={`p-3 rounded-2xl transition-all ${isQuantumMode ? 'bg-indigo-500 text-gray-950 shadow-xl' : 'bg-gray-800 text-gray-400'}`}>
-                           <Cpu size={28} />
-                         </div>
-                         <div>
-                            <h3 className="font-black text-lg uppercase tracking-tight">
-                              {isQuantumMode ? 'Quantum Expected Value' : 'Success Projections'}
-                            </h3>
-                            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-1">
-                              {isQuantumMode 
-                                ? 'Weighted EV score combining all win states over 10 draw steps' 
-                                : 'Probability of hitting each win state as you draw more cards'}
-                            </p>
-                         </div>
+                        <div className={`p-3 rounded-2xl transition-all ${isQuantumMode ? 'bg-indigo-500 text-gray-950 shadow-xl' : 'bg-gray-800 text-gray-400'}`}>
+                          <Cpu size={28} />
+                        </div>
+                        <div>
+                          <h3 className="font-black text-lg uppercase tracking-tight">
+                            {isQuantumMode ? 'Quantum Expected Value' : 'Success Projections'}
+                          </h3>
+                          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-1">
+                            {isQuantumMode
+                              ? 'Weighted EV score combining all win states over 10 draw steps'
+                              : 'Probability of hitting each win state as you draw more cards'}
+                          </p>
+                        </div>
                       </div>
 
                       <div className="flex items-center gap-4 bg-gray-950 p-2 rounded-2xl border border-gray-800 shadow-inner">
                         <span className={`text-[10px] font-black uppercase tracking-widest px-3 transition-colors ${!isQuantumMode ? 'text-amber-500' : 'text-gray-600'}`}>Classical</span>
-                        <button 
+                        <button
                           onClick={() => setIsQuantumMode(!isQuantumMode)}
                           className={`w-14 h-7 rounded-full p-1 transition-all ${isQuantumMode ? 'bg-indigo-500' : 'bg-amber-600'}`}
                         >
@@ -1049,41 +1087,32 @@ export default function App() {
                       </div>
                     </div>
 
-                    <div className="flex items-start gap-2.5 bg-gray-950/60 border border-gray-800/50 rounded-2xl p-3.5 mb-8">
-                      <Info size={14} className="text-amber-500 mt-0.5 shrink-0" />
-                      <p className="text-[11px] text-gray-500 leading-relaxed">
-                        <strong className="text-gray-400">Classical mode</strong> plots the raw % chance of each win state as a separate line. 
-                        <strong className="text-gray-400"> Quantum mode</strong> merges all conditions into a single Expected Value curve using their weights — 
-                        higher EV means a stronger overall hand quality at that draw step.
-                      </p>
-                    </div>
-
                     {showComplexMath && (
-                      <div className="bg-indigo-500/5 border border-indigo-500/20 rounded-2xl p-4 mb-8">
+                      <div className="bg-indigo-500/5 border border-indigo-500/20 rounded-2xl p-4 mb-6">
                         <p className="text-[10px] font-black text-indigo-300 uppercase tracking-widest mb-2">Complex Arithmetic</p>
                         <p className="text-[11px] text-gray-400 leading-relaxed">
-                          Hypergeometric core:{" "}
+                          Hypergeometric core:{' '}
                           <code className="bg-gray-900 px-2 py-0.5 rounded">P(X = x) = [C(K, x) * C(N-K, n-x)] / C(N, n)</code>.
-                          For your weighted curve:{" "}
+                          {' '}For your weighted curve:{' '}
                           <code className="bg-gray-900 px-2 py-0.5 rounded">EV(step) = Σ [P(conditionᵢ) × weightᵢ]</code>.
                         </p>
                       </div>
                     )}
 
-                    <div className="h-96 md:h-[500px]">
+                    <div className="h-[52vh] min-h-[320px]">
                       <ResponsiveContainer width="100%" height="100%">
                         <ComposedChart data={timelineData}>
                           <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" vertical={false} />
                           <XAxis dataKey="step" stroke="#4b5563" fontSize={10} fontStyle="bold" axisLine={false} tickLine={false} />
-                          <YAxis 
-                            stroke="#4b5563" 
-                            fontSize={10} 
-                            unit={isQuantumMode ? "" : "%"} 
+                          <YAxis
+                            stroke="#4b5563"
+                            fontSize={10}
+                            unit={isQuantumMode ? '' : '%'}
                             domain={isQuantumMode ? ['auto', 'auto'] : [0, 100]}
                             axisLine={false}
                             tickLine={false}
                           />
-                          <Tooltip 
+                          <Tooltip
                             contentStyle={{ backgroundColor: '#111827', border: '1px solid #374151', borderRadius: '20px' }}
                             itemStyle={{ fontSize: '12px', fontWeight: '900', textTransform: 'uppercase' }}
                             formatter={(value: string) => [value, isQuantumMode ? 'EV Score' : '% Success']}
@@ -1093,12 +1122,12 @@ export default function App() {
                             <Area type="monotone" dataKey="EV" fill="#6366f1" stroke="#6366f1" fillOpacity={0.15} strokeWidth={5} />
                           ) : (
                             conditions.map((c, i) => (
-                              <Line 
-                                key={c.id} 
-                                type="monotone" 
-                                dataKey={c.name} 
-                                stroke={i === 0 ? "#f59e0b" : i === 1 ? "#6366f1" : "#10b981"} 
-                                strokeWidth={4} 
+                              <Line
+                                key={c.id}
+                                type="monotone"
+                                dataKey={c.name}
+                                stroke={i === 0 ? '#f59e0b' : i === 1 ? '#6366f1' : '#10b981'}
+                                strokeWidth={4}
                                 dot={{ r: 6, strokeWidth: 2, stroke: '#111827' }}
                                 animationDuration={800 + i * 200}
                               />
@@ -1109,7 +1138,7 @@ export default function App() {
                     </div>
                   </section>
                 </div>
-              </div>
+              )}
             </div>
           )}
 
