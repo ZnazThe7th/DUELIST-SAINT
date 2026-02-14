@@ -8,6 +8,7 @@ import {
 } from './types';
 import { GAME_PRESETS, DEFAULT_ROLES } from './constants';
 import { 
+  hypergeometricPMF,
   multivariateHypergeometricPMF, 
   getValidDrawVectors, 
   binomProb 
@@ -181,6 +182,13 @@ export default function App() {
     if (totalAtomCount < deckSize) return { valid: true, msg: `Filling ${remainingCards} cards as "Generic".` };
     return { valid: true, msg: "Deck sum is perfect." };
   }, [totalAtomCount, deckSize, remainingCards]);
+
+  const getSeenInStartingHandProb = (count: number): number => {
+    if (deckSize <= 0 || startHand <= 0 || count <= 0) return 0;
+    const draws = Math.min(startHand, deckSize);
+    const successes = Math.min(Math.max(count, 0), deckSize);
+    return 1 - hypergeometricPMF(deckSize, successes, draws, 0);
+  };
 
   // Post-Sideboard deck composition
   const totalSidedOut = (Object.values(sideOuts) as number[]).reduce<number>((s, v) => s + v, 0);
@@ -760,7 +768,14 @@ export default function App() {
                                 <Filter size={14} className="text-gray-500" />
                                 <span className="text-[11px] font-black text-gray-500 uppercase tracking-widest">Assign Functional Roles</span>
                               </div>
-                              <span className="text-[10px] font-bold text-gray-500 uppercase">Impact: <span className="text-amber-500">{((atom.count / deckSize) * 100).toFixed(1)}%</span></span>
+                              <div className="text-right">
+                                <span className="block text-[10px] font-bold text-gray-500 uppercase">
+                                  Impact: <span className="text-amber-500">{((atom.count / Math.max(deckSize, 1)) * 100).toFixed(1)}%</span>
+                                </span>
+                                <span className="block text-[10px] font-bold text-gray-500 uppercase">
+                                  Seen In Start Hand: <span className="text-emerald-400">{(getSeenInStartingHandProb(atom.count) * 100).toFixed(1)}%</span>
+                                </span>
+                              </div>
                             </div>
 
                             <div className="flex flex-wrap gap-2">
